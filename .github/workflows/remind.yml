@@ -1,0 +1,27 @@
+# Save this in your repo as .github/workflows/remind.yml
+name: Vet records reminder
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # every day at 13:00 UTC (~9am US Eastern)
+  workflow_dispatch:        # lets you run it manually from the Actions tab
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests
+      - run: python remind.py
+        env:
+          JOTFORM_API_KEY: ${{ secrets.JOTFORM_API_KEY }}
+          JOTFORM_FORM_ID: ${{ secrets.JOTFORM_FORM_ID }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_USER_ID: ${{ secrets.DISCORD_USER_ID }}
+          DATE_ADOPTED_QID: ${{ secrets.DATE_ADOPTED_QID }}
+          NOTES_QID: ${{ secrets.NOTES_QID }}
+          STATUS_QID: ${{ secrets.STATUS_QID }}
+          STATUS_VALUE: Adopted   # must match the status option text in your form
