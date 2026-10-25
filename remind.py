@@ -152,10 +152,10 @@ def parse_date(answer):
         except ValueError:
             continue
     return None
-
-
+  
 def answer_text(answers, qid):
     a = answers.get(qid, {}).get("answer")
+    log("DEBUG", f"{a}")
     return a.strip() if isinstance(a, str) else ""
 
 
