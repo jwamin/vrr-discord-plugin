@@ -24,4 +24,5 @@ jobs:
           DATE_ADOPTED_QID: ${{ secrets.DATE_ADOPTED_QID }}
           NOTES_QID: ${{ secrets.NOTES_QID }}
           STATUS_QID: ${{ secrets.STATUS_QID }}
+          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
           STATUS_VALUE: Adopted   # must match the status option text in your form
