@@ -1,6 +1,6 @@
 # Cat rescue: vet records reminder
 
-Every other day, posts ONE Discord message (tagging the person who sends vet records)
+Every day, posts ONE Discord message (tagging the person who sends vet records)
 listing every record whose Status is "Adopted" and whose "Date Adopted" is 7 or more
 days ago. Each line includes the adoption date and the Notes field (which contains the
 cat's name), longest overdue first.
@@ -12,7 +12,7 @@ It runs on GitHub Actions (free). Nothing needs hosting.
 
 ## Files
 - `remind.py` - the script
-- `.github/workflows/remind.yml` - schedule (every other day, 13:00 UTC, about 9am US Eastern)
+- `.github/workflows/remind.yml` - schedule (daily, 13:00 UTC, about 9am US Eastern)
 
 ## Setup
 1. In Jotform, add a "Date Adopted" date field to the form (it appears as a table column).
@@ -33,11 +33,12 @@ It runs on GitHub Actions (free). Nothing needs hosting.
    (Settings > Secrets and variables > Actions):
    `JOTFORM_API_KEY`, `JOTFORM_FORM_ID`, `DISCORD_WEBHOOK_URL`, `DISCORD_USER_ID`,
    `DATE_ADOPTED_QID`, `NOTES_QID`, `STATUS_QID`
-   Optional: `RECORDS_QID` (the "Vet records received" question ID). If you skip it,
-   delete the `RECORDS_QID` line from the workflow or leave the secret unset; the script
-   then reminds until Status changes.
+   Optional: `RECORDS_QID` (the "Vet records received" question ID). If you leave it
+   unset, the script reminds until Status changes.
    Reminders only include records whose Status equals "Adopted" (case-insensitive).
    If your status option is worded differently, change `STATUS_VALUE` in the workflow.
+   A Status column added in Jotform Tables returns option IDs like `{hjrru94ta7}`
+   rather than text; the script translates these back to the option label for you.
 7. Test: Actions tab > "Vet records reminder" > Run workflow, then open the run and
    read the "Run python remind.py" log (see Logging below). To force a test message,
    set `MIN_DAYS` in the workflow to "0", run it, then set it back to "7".
@@ -48,7 +49,12 @@ status and timing, one line per eligible record, a summary such as
 `Summary: 31 fetched, 5 eligible; skipped: 22 status is not Adopted, 4 adopted less
 than 7 days ago`, and the total run time. Check that "eligible" matches the number of
 records you expect.
-- `LOG_LEVEL: DEBUG` in the workflow also logs every skipped record and why.
+- Log level is INFO by default. DEBUG also logs every skipped record and why.
+  - One-off: Actions tab > "Vet records reminder" > Run workflow, pick `DEBUG`.
+  - For scheduled runs too: Settings > Secrets and variables > Actions > Variables,
+    add `LOG_LEVEL` = `DEBUG` (delete it to go back to INFO). Use a variable, not a
+    secret: GitHub masks secret values, so a `DEBUG` secret turns every log level
+    into `***`.
 - Warnings point at likely mistakes: an empty secret, a Discord user ID that isn't a
   number, a question ID that appears in no submission, or an unreadable date.
 - Any failed call (bad API key, wrong form ID, deleted webhook) prints the HTTP status
@@ -59,8 +65,6 @@ records you expect.
   masking of secrets.
 
 ## Notes
-- The cron `*/2` runs on odd dates of the month, so it runs on the 31st and the 1st
-  back to back. If that matters, run daily and add a date-parity check in the script.
 - GitHub pauses scheduled workflows in repos with no activity for 60 days. If the
   reminders stop, open the Actions tab and re-enable the workflow.
 - Date fields can come back in different formats. `parse_date` handles the common

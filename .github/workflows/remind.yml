@@ -5,6 +5,12 @@ on:
   schedule:
     - cron: "0 13 * * *"   # every day at 13:00 UTC (~9am US Eastern)
   workflow_dispatch:        # lets you run it manually from the Actions tab
+    inputs:
+      log_level:
+        description: "Log level for this run (DEBUG also lists every skipped record)"
+        type: choice
+        options: [INFO, DEBUG, WARN, ERROR]
+        default: INFO
 
 jobs:
   remind:
@@ -15,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
-      - run: python remind.py --show-status
+      - run: python remind.py
         env:
           JOTFORM_API_KEY: ${{ secrets.JOTFORM_API_KEY }}
           JOTFORM_FORM_ID: ${{ secrets.JOTFORM_FORM_ID }}
@@ -24,5 +30,7 @@ jobs:
           DATE_ADOPTED_QID: ${{ secrets.DATE_ADOPTED_QID }}
           NOTES_QID: ${{ secrets.NOTES_QID }}
           STATUS_QID: ${{ secrets.STATUS_QID }}
-          LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+          RECORDS_QID: ${{ secrets.RECORDS_QID }}   # optional; unset = remind until Status changes
           STATUS_VALUE: Adopted   # must match the status option text in your form
+          # manual run: the option picked; scheduled run: the LOG_LEVEL repo variable, else INFO
+          LOG_LEVEL: ${{ inputs.log_level || vars.LOG_LEVEL || 'INFO' }}

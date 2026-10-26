@@ -4,7 +4,7 @@ person) listing every record that is 'Adopted' and at least MIN_DAYS (default 7)
 past its 'Date Adopted'. Each line includes the Notes field (which has the cat's name).
 
 It keeps listing a record on every run until its status changes, or (optional) until
-the 'Vet records received' field is filled in. Schedule it to run every other day.
+the 'Vet records received' field is filled in. Scheduled daily by the workflow.
 
 Config comes from environment variables (set as GitHub Actions secrets):
   JOTFORM_API_KEY, JOTFORM_FORM_ID, DISCORD_WEBHOOK_URL, DISCORD_USER_ID
@@ -13,12 +13,15 @@ Question IDs (find them with `python remind.py --show-fields`):
   RECORDS_QID  (optional: if set, records where this field is filled in are skipped)
 Other settings:
   STATUS_VALUE (default "Adopted", case-insensitive), MIN_DAYS (default 7),
-  LOG_LEVEL (DEBUG, INFO, WARN, ERROR; default INFO)
+  LOG_LEVEL (DEBUG, INFO, WARN, ERROR; default INFO). In GitHub Actions, pick it when
+  running the workflow manually, or set a LOG_LEVEL repository *variable* (not a
+  secret: masking would turn every 'DEBUG' in the log into '***').
 
 Logging: every log line is passed through redact(). API keys and the webhook URL are
 hidden completely, IDs show only their last 4 characters, and notes / cat names /
 Discord message text are never logged.
 """
+import json
 import os
 import re
 import sys
@@ -132,50 +135,6 @@ def show_fields():
         print(f"QID {qid}: {q.get('text')} ({q.get('type')})")
 
 
-def show_status():
-    """Print the Status question's definition and the raw status values seen, to work
-    out how option IDs like '{abc123}' map to labels like 'Adopted'."""
-    import json
-    questions = jotform_get("Jotform questions", f"/form/{FORM_ID}/questions")
-    print(f"--- Status question {STATUS_QID} definition ---")
-    print(redact(json.dumps(questions.get(STATUS_QID), indent=2)))
-    values, example = Counter(), None
-    for sub in get_submissions():
-        ans = sub.get("answers", {}).get(STATUS_QID)
-        if ans:
-            values[repr(ans.get("answer"))] += 1
-            example = example or ans
-    print("--- Raw status values (count) ---")
-    for v, n in values.most_common():
-        print(f"{n:5}  {v}")
-    print("--- One full status answer object ---")
-    print(redact(json.dumps(example, indent=2)))
-
-    # The status column may be a Jotform Tables column rather than a form question,
-    # so look for where its option IDs are defined in the form properties.
-    ids = {v.strip("'\"{}") for v in values if v.startswith(("'{", '"{'))}
-    props = jotform_get("Jotform properties", f"/form/{FORM_ID}/properties")
-
-    def search(node, path):
-        if isinstance(node, dict):
-            items = node.items()
-        elif isinstance(node, list):
-            items = enumerate(node)
-        else:
-            if isinstance(node, str) and any(i in node for i in ids):
-                print(f"{path}: {node[:500]}")
-            return
-        for k, v in items:
-            if str(k) in ids:
-                print(f"{path}/{k}: {json.dumps(v)[:500]}")
-            search(v, f"{path}/{k}")
-
-    print(f"--- Where the {len(ids)} status IDs appear in form properties ---")
-    search(props, "")
-    print("--- Top-level property keys ---")
-    print(", ".join(sorted(props)) if isinstance(props, dict) else type(props).__name__)
-
-
 # --------------------------------------------------------------- parsing ----
 def parse_date(answer):
     """Date fields can come back as a string or a dict; handle both."""
@@ -196,10 +155,27 @@ def parse_date(answer):
         except ValueError:
             continue
     return None
-  
+
+
 def answer_text(answers, qid):
     a = answers.get(qid, {}).get("answer")
     return a.strip() if isinstance(a, str) else ""
+
+
+def status_label(answers, qid):
+    """Status columns from Jotform Tables answer with an option ID like '{hjrru94ta7}';
+    the ID-to-label map comes with each answer as a JSON string in 'options_array'."""
+    a = answers.get(qid, {})
+    text = answer_text(answers, qid)
+    m = re.fullmatch(r"\{(\w+)\}", text)
+    if not m:
+        return text
+    try:
+        options = json.loads(a.get("options_array") or "{}")
+        return options[m.group(1)]["value"].strip()
+    except (ValueError, KeyError, TypeError, AttributeError):
+        log("WARN", f"status option {short(text)} not found in options_array")
+        return text
 
 
 def has_value(answers, qid):
@@ -230,9 +206,6 @@ def send_discord(lines):
 def main():
     if "--show-fields" in sys.argv:
         show_fields()
-        return
-    if "--show-status" in sys.argv:
-        show_status()
         return
 
     started = time.monotonic()
@@ -269,7 +242,7 @@ def main():
             skipped["deleted/archived submission"] += 1
             log("DEBUG", f"[{sid}] skipped: submission is {sub.get('status')}")
             continue
-        status_val = answer_text(answers, STATUS_QID)
+        status_val = status_label(answers, STATUS_QID)
         if status_val.lower() != REQUIRED_STATUS:
             skipped["status is not Adopted"] += 1
             log("DEBUG", f"[{sid}] skipped: status {short(status_val)}")
