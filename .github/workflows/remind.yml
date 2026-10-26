@@ -3,7 +3,7 @@ name: Vet records reminder
 
 on:
   schedule:
-    - cron: "0 9 * * *"   # every day at 13:00 UTC (~9am US Eastern)
+    - cron: "0 0 */3 * *"   # every day at 13:00 UTC (~9am US Eastern)
   workflow_dispatch:        # lets you run it manually from the Actions tab
     inputs:
       log_level:
