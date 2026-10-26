@@ -1,6 +1,6 @@
 # Cat rescue: vet records reminder
 
-Every day, posts ONE Discord message (tagging the person who sends vet records)
+Every day, posts ONE Discord message (tagging the people who send vet records)
 listing every record whose Status is "Adopted" and whose "Date Adopted" is 7 or more
 days ago. Each line includes the adoption date and the Notes field (which contains the
 cat's name), longest overdue first.
@@ -19,9 +19,10 @@ It runs on GitHub Actions (free). Nothing needs hosting.
    Recommended: also add a "Vet records received" field (e.g. a short text or checkbox).
    Once it has any value, that record stops being reminded.
 2. Discord: Channel settings > Integrations > Webhooks > New Webhook. Copy the URL.
-3. Discord: turn on Developer Mode (User Settings > Advanced), right-click the person
-   and choose Copy User ID. This is what makes the message ping them. It must be the
-   long number, not their username.
+3. Discord: turn on Developer Mode (User Settings > Advanced), right-click each person
+   to notify and choose Copy User ID. This is what makes the message ping them. It must
+   be the long number, not their username. To notify several people, put all their IDs
+   in the `DISCORD_USER_ID` secret separated by commas, e.g. `123456789012345678,876543210987654321`.
 4. Jotform: get an API key (Account Settings > API) and the form ID (in the form URL).
    EU accounts: set `JOTFORM_BASE` to `https://eu-api.jotform.com` in the workflow env.
 5. Find the question IDs for "Date Adopted", "Notes", "Status" (and "Vet records received"):
