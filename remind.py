@@ -132,6 +132,50 @@ def show_fields():
         print(f"QID {qid}: {q.get('text')} ({q.get('type')})")
 
 
+def show_status():
+    """Print the Status question's definition and the raw status values seen, to work
+    out how option IDs like '{abc123}' map to labels like 'Adopted'."""
+    import json
+    questions = jotform_get("Jotform questions", f"/form/{FORM_ID}/questions")
+    print(f"--- Status question {STATUS_QID} definition ---")
+    print(redact(json.dumps(questions.get(STATUS_QID), indent=2)))
+    values, example = Counter(), None
+    for sub in get_submissions():
+        ans = sub.get("answers", {}).get(STATUS_QID)
+        if ans:
+            values[repr(ans.get("answer"))] += 1
+            example = example or ans
+    print("--- Raw status values (count) ---")
+    for v, n in values.most_common():
+        print(f"{n:5}  {v}")
+    print("--- One full status answer object ---")
+    print(redact(json.dumps(example, indent=2)))
+
+    # The status column may be a Jotform Tables column rather than a form question,
+    # so look for where its option IDs are defined in the form properties.
+    ids = {v.strip("'\"{}") for v in values if v.startswith(("'{", '"{'))}
+    props = jotform_get("Jotform properties", f"/form/{FORM_ID}/properties")
+
+    def search(node, path):
+        if isinstance(node, dict):
+            items = node.items()
+        elif isinstance(node, list):
+            items = enumerate(node)
+        else:
+            if isinstance(node, str) and any(i in node for i in ids):
+                print(f"{path}: {node[:500]}")
+            return
+        for k, v in items:
+            if str(k) in ids:
+                print(f"{path}/{k}: {json.dumps(v)[:500]}")
+            search(v, f"{path}/{k}")
+
+    print(f"--- Where the {len(ids)} status IDs appear in form properties ---")
+    search(props, "")
+    print("--- Top-level property keys ---")
+    print(", ".join(sorted(props)) if isinstance(props, dict) else type(props).__name__)
+
+
 # --------------------------------------------------------------- parsing ----
 def parse_date(answer):
     """Date fields can come back as a string or a dict; handle both."""
@@ -155,7 +199,6 @@ def parse_date(answer):
   
 def answer_text(answers, qid):
     a = answers.get(qid, {}).get("answer")
-    log("DEBUG", f"{a}")
     return a.strip() if isinstance(a, str) else ""
 
 
@@ -187,6 +230,9 @@ def send_discord(lines):
 def main():
     if "--show-fields" in sys.argv:
         show_fields()
+        return
+    if "--show-status" in sys.argv:
+        show_status()
         return
 
     started = time.monotonic()

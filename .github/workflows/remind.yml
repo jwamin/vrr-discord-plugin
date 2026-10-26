@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install requests
-      - run: python remind.py
+      - run: python remind.py --show-status
         env:
           JOTFORM_API_KEY: ${{ secrets.JOTFORM_API_KEY }}
           JOTFORM_FORM_ID: ${{ secrets.JOTFORM_FORM_ID }}
