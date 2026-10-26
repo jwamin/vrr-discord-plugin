@@ -1,13 +1,14 @@
 """
 Check Jotform submissions and post ONE Discord message (tagging the vet-records
-person) listing every record that is 'Adopted' and at least MIN_DAYS (default 7)
+people) listing every record that is 'Adopted' and at least MIN_DAYS (default 7)
 past its 'Date Adopted'. Each line includes the Notes field (which has the cat's name).
 
 It keeps listing a record on every run until its status changes, or (optional) until
 the 'Vet records received' field is filled in. Scheduled daily by the workflow.
 
 Config comes from environment variables (set as GitHub Actions secrets):
-  JOTFORM_API_KEY, JOTFORM_FORM_ID, DISCORD_WEBHOOK_URL, DISCORD_USER_ID
+  JOTFORM_API_KEY, JOTFORM_FORM_ID, DISCORD_WEBHOOK_URL,
+  DISCORD_USER_ID (one or more Discord user IDs, separated by commas or spaces)
 Question IDs (find them with `python remind.py --show-fields`):
   DATE_ADOPTED_QID, NOTES_QID, STATUS_QID
   RECORDS_QID  (optional: if set, records where this field is filled in are skipped)
@@ -34,7 +35,7 @@ import requests
 API_KEY = os.environ.get("JOTFORM_API_KEY", "")
 FORM_ID = os.environ.get("JOTFORM_FORM_ID", "")
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "")
-USER_ID = os.environ.get("DISCORD_USER_ID", "")
+USER_IDS = re.findall(r"[^\s,]+", os.environ.get("DISCORD_USER_ID", ""))  # comma/space separated
 DATE_QID = os.environ.get("DATE_ADOPTED_QID", "")
 NOTES_QID = os.environ.get("NOTES_QID", "")
 STATUS_QID = os.environ.get("STATUS_QID", "")
@@ -67,7 +68,7 @@ def redact(text):
     for secret in (WEBHOOK, API_KEY):
         if secret:
             text = text.replace(secret, "***")
-    for ident in (FORM_ID, USER_ID):
+    for ident in (FORM_ID, *USER_IDS):
         if ident and len(ident) >= 4:
             text = text.replace(ident, mask_id(ident))
     return text
@@ -189,7 +190,8 @@ def has_value(answers, qid):
 # --------------------------------------------------------------- discord ----
 def send_discord(lines):
     """Send one message (split only if it would exceed Discord's length limit)."""
-    header = f"<@{USER_ID}> Vet records still needed for these adopted cats:"
+    mentions = " ".join(f"<@{uid}>" for uid in USER_IDS)
+    header = f"{mentions} Vet records still needed for these adopted cats:"
     chunks, current = [], header
     for line in lines:
         if len(current) + len(line) + 1 > DISCORD_LIMIT:
@@ -214,7 +216,7 @@ def main():
                 f"{'configured' if RECORDS_QID else 'not configured'}.")
 
     required = (("JOTFORM_API_KEY", API_KEY), ("JOTFORM_FORM_ID", FORM_ID),
-                ("DISCORD_WEBHOOK_URL", WEBHOOK), ("DISCORD_USER_ID", USER_ID),
+                ("DISCORD_WEBHOOK_URL", WEBHOOK), ("DISCORD_USER_ID", USER_IDS),
                 ("DATE_ADOPTED_QID", DATE_QID), ("NOTES_QID", NOTES_QID),
                 ("STATUS_QID", STATUS_QID))
     missing = [name for name, val in required if not val]
@@ -222,9 +224,10 @@ def main():
         log("ERROR", f"{name} is empty - check the GitHub secret of that name")
     if missing:
         sys.exit(1)
-    if not USER_ID.isdigit():
-        log("WARN", "DISCORD_USER_ID is not a plain number, so the ping may not work "
-                    "(use Discord's 'Copy User ID', not the username)")
+    for uid in USER_IDS:
+        if not uid.isdigit():
+            log("WARN", f"DISCORD_USER_ID entry {mask_id(uid)} is not a plain number, so "
+                        "that ping may not work (use Discord's 'Copy User ID', not the username)")
 
     today = date.today()
     subs = get_submissions()
