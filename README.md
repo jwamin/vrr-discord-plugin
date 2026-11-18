@@ -40,9 +40,24 @@ It runs on GitHub Actions (free). Nothing needs hosting.
    If your status option is worded differently, change `STATUS_VALUE` in the workflow.
    A Status column added in Jotform Tables returns option IDs like `{hjrru94ta7}`
    rather than text; the script translates these back to the option label for you.
+   Optional: `NTFY_TOPIC` to get a phone/desktop notification every time the job runs
+   (see below).
 7. Test: Actions tab > "Vet records reminder" > Run workflow, then open the run and
    read the "Run python remind.py" log (see Logging below). To force a test message,
    set `MIN_DAYS` in the workflow to "0", run it, then set it back to "7".
+
+## Run notifications (ntfy.sh)
+Every run can send a push notification through [ntfy.sh](https://ntfy.sh), so you
+know the job ran without opening GitHub. A successful run sends its summary (counts
+only, e.g. "Summary: 31 fetched, 2 eligible..." and "Reminder sent covering 2
+record(s)."). A failed run sends a high-priority "Vet reminder FAILED" alert. Tapping
+either notification opens the run's log.
+1. Install the ntfy app (iOS / Android) or open https://ntfy.sh/app in a browser.
+2. Make up a long, random topic name, e.g. `vrr-vet-7f3k9q2xw8`. Anyone who knows
+   the name can read or post to it, so treat it like a password.
+3. Subscribe to that topic in the app.
+4. Add it as the repository secret `NTFY_TOPIC`. Without that secret, the
+   notification step is skipped.
 
 ## Logging
 Each run logs, in order: the settings in use, each Jotform/Discord call with its HTTP
