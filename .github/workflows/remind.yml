@@ -16,8 +16,8 @@ on:
       log_level:
         description: "Log level for this run (DEBUG also lists every skipped record)"
         type: choice
-        options: [INFO, DEBUG, WARN, ERROR]
-        default: INFO
+        options: [default, INFO, DEBUG, WARN, ERROR]
+        default: default   # "default" = the LOG_LEVEL repo variable, else INFO
 
 jobs:
   remind:
@@ -40,8 +40,9 @@ jobs:
           STATUS_QID: ${{ secrets.STATUS_QID }}
           RECORDS_QID: ${{ secrets.RECORDS_QID }}   # optional; unset = remind until Status changes
           STATUS_VALUE: Adopted   # must match the status option text in your form
-          # manual run: the option picked; scheduled run: the LOG_LEVEL repo variable, else INFO
-          LOG_LEVEL: ${{ inputs.log_level || vars.LOG_LEVEL || 'INFO' }}
+          # the option picked when run by hand; otherwise (launchd, schedule) the
+          # LOG_LEVEL repo variable, else INFO
+          LOG_LEVEL: ${{ (inputs.log_level != 'default' && inputs.log_level) || vars.LOG_LEVEL || 'INFO' }}
 
       # Phone/desktop notification via ntfy.sh on every run. Skipped if NTFY_TOPIC is unset.
       # Only counts are sent (from the script's own log), never notes or cat names.
