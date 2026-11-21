@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Starts the vet records reminder workflow Mon/Wed/Fri at 08:30, with retries at 09:00
+  and 09:30 (the script skips them if it has already run that day). Times are this
+  Mac's local time, which should be New York time.
+
+  Install:
+    cp launchd/com.jwamin.vrr-remind.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.jwamin.vrr-remind.plist
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.jwamin.vrr-remind
+    rm ~/Library/LaunchAgents/com.jwamin.vrr-remind.plist
+  Log: ~/Library/Logs/vrr-remind-trigger.log
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.jwamin.vrr-remind</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/jossy/Developer/github/vrr-discord-plugin/launchd/trigger-remind.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>1</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>3</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>8</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer></dict>
+    <dict><key>Weekday</key><integer>5</integer><key>Hour</key><integer>9</integer><key>Minute</key><integer>30</integer></dict>
+  </array>
+  <key>StandardOutPath</key>
+  <string>/Users/jossy/Library/Logs/vrr-remind-trigger.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/jossy/Library/Logs/vrr-remind-trigger.log</string>
+</dict>
+</plist>

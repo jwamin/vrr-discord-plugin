@@ -2,11 +2,14 @@
 name: Vet records reminder
 
 on:
-  schedule:
-    # Mon/Wed/Fri 08:17 New York time. Off the top of the hour because GitHub delays
-    # scheduled runs most at :00; even so, runs have started hours late.
-    - cron: "17 8 * * 1,3,5"
-      timezone: "America/New_York"
+  # GitHub schedule disabled for now. Scheduled runs started 4-9 hours late (e.g. a
+  # 9am New York run arriving around 4:40pm), so the run is started from a Mac via
+  # launchd instead: see launchd/ (Mon/Wed/Fri 8:30am New York time, retries until 10am).
+  # To go back to GitHub's schedule, uncomment this block. Don't use both at once, or
+  # each Mon/Wed/Fri gets two reminders.
+  # schedule:
+  #   - cron: "17 8 * * 1,3,5"   # Mon/Wed/Fri 08:17, off :00 where GitHub delays most
+  #     timezone: "America/New_York"
 
   workflow_dispatch:        # lets you run it manually from the Actions tab
     inputs:
